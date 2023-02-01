@@ -10,7 +10,6 @@ import MintTask from './Components/MintTask';
 import BuySell from './Components/BuySell';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NftTask from './Components/NFT/NftTask';
-import Nft from './Components/NFT/Nft';
 import BuyNft from './Components/NFT/BuyNft';
 
 function App() {
@@ -28,7 +27,6 @@ function App() {
           {/* <Route path='/' element={<MintNft />} /> */}
           <Route path='/' element={<NftTask />} />
           <Route path='buy_nft' element={<BuyNft />} />
-          {/* <Route path='/' element={<Nft />} /> */}
         </Routes>
       </Router>
     </div>

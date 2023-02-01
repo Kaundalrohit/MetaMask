@@ -7,6 +7,10 @@ import Erc1155 from '.././../artifacts/Erc1155.json'
 import IERC20 from '../../artifacts/IERC20'
 import Spinner from "./Spinner"
 import { useNavigate } from "react-router-dom"
+import successImg from "./Images/icons8-checkmark-96.png"
+import pendingImg from "./Images/icons8-hourglass-90.png"
+import { toast } from "react-toastify"
+import axios from "axios"
 
 // export const STAGING_ERC721_CONTRACT_ADDRESS_KEY = '0xD698750211A7CE987E7f1964a5EAE82F3C5c49dF'//staging
 export const MARKETPLACE_ADDRESS = "0xc047A78f99458D56932b761a93D6CfCB13Bd298c"
@@ -17,6 +21,7 @@ export const ethereumInstalled = () => {
     return (window as any).ethereum
 }
 
+export const stesArray = [] as any
 export default () => {
     const navigate = useNavigate()
 
@@ -28,16 +33,19 @@ export default () => {
     const [errorMessage, setErrorMessage] = useState<any>(null);
     const [defaultAccount, setDefaultAccount] = useState<any>(null);
     const [userBalance, setUserBalance] = useState<any>(null);
+    const [uploadImage, setUploadImage] = useState('')
+    const [imagesUrl, setImageUrl] = useState<any>('')
+
     const [connButtonText, setConnButtonText] = useState<any>('Connect Wallet');
     // const [mintForm, setMintForm] = useState(true)
     const [showDetails, setShowDetails] = useState(false)
     const [mintLoading, setMintLoading] = useState(false)
     const [checkAsign, setCheckAsign] = useState(false)
     const [signLoading, setSignLoading] = useState(false)
-    const [handleModal, setHandleModal] = useState(false)
+    const [handleModal, setHandleModal] = useState(true)
     const [sucess, setSucess] = useState('')
 
-    const [tokenValue, setTokenValue] = useState({
+    const [tokenValue, setTokenValue] = useState<any>({
         signature: '',
         salt: '' as any,
         tokenContract: '',
@@ -46,26 +54,37 @@ export default () => {
         owner: '',
         minPrice: '' as any,
         auctionType: ""
-
     })
-
     const [state, setState] = useState({
-        mint_URI: '',
-        price: "",
-        royality: ''
+        name: '',
+        price: 0,
+        description: '',
+        royality: 0,
     })
-
-    const handleState = (event: any) => {
+    const handleState = (e: any) => {
         setState({
             ...state,
-            [event.target.name]: event.target.value
+            [e.target.name]: e.target.value
         })
     }
+
+    // const [state, setState] = useState({
+    //     mint_URI: '',
+    //     price: "",
+    //     royality: ''
+    // })
+
+    // const handleState = (event: any) => {
+    //     setState({
+    //         ...state,
+    //         [event.target.name]: event.target.value
+    //     })
+    // }
 
 
 
     window.onload = (event: any) => {
-        isConnected();
+        // isConnected();
     };
 
     const isConnected = async () => {
@@ -123,7 +142,6 @@ export default () => {
     const getMyProvider = async () => {
         try {
             const { accounts, eth_chainId, provider }: any = await loginWithMetamaskConnect();
-            console.log('provider', provider);
             let balanceInWei = await provider.getBalance(accounts[0].toString())
             let gasPriceInWei = await provider.getGasPrice()
 
@@ -143,30 +161,22 @@ export default () => {
         const abi = EhisabERC721.abi;
         const { provider, accounts } = await getMyProvider()
         const signer = provider.getSigner()
-        console.log('signer', signer);
-
         const contract = new ethers.Contract(ERC721_ADDRESS, abi, signer);
-        console.log('getERC721Contract', contract);
-
         return { contract, accounts }
-
     }
+
     const getMarketPlaceContract = async () => {
         const abi = MARKETPLACE_ARTIFACTS.abi;
         const { provider, accounts } = await getMyProvider()
         const signer = provider.getSigner()
         const contract = new ethers.Contract(MARKETPLACE_ADDRESS, abi, signer);
-        console.log("getMarketPlaceContract contract", contract);
         return { contract, accounts, provider, signer }
     }
 
     const requestApprove = async (contract: any, address: string) => {
-        console.log('requestApprove-loading');
         try {
             const trasactionRes = await contract.functions.setApprovalForAll(address, true);
-            console.log("trasactionRes", trasactionRes);
             const transactionSuccess = await trasactionRes.wait();
-            console.log("requestApprove transactionSuccess", transactionSuccess);
             setCheckAsign(false)
             return transactionSuccess
         } catch (error: any) {
@@ -177,8 +187,8 @@ export default () => {
 
     const approveMarktplace = async () => {
         setMintLoading(false)
+        stesArray.push(1)
         setCheckAsign(true)
-        console.log('approveMarktplace-loading');
         try {
             const { contract, accounts } = await getERC721Contract();
             const isApproveForAllRes = await contract.functions.isApprovedForAll(accounts[0], MARKETPLACE_ADDRESS);
@@ -201,12 +211,12 @@ export default () => {
 
     const signMyToken = async () => {
         setCheckAsign(false)
+        stesArray.push(2)
         setSignLoading(true)
         const { contract, accounts, signer } = await getMarketPlaceContract()
         const ether = ethers.utils.parseEther(Number(state.price).toFixed(18));
         await VoucherRohit.setToken(contract, signer);
         const { signature, salt, tokenContract, endTime, quantity, owner, minPrice } = await VoucherRohit.CreateVoucher(accounts[0], 1, Number(1), 0, ether, ERC721_ADDRESS);
-        console.log('minPrice', minPrice);
         setTokenValue({
             ...tokenValue,
             signature: signature,
@@ -220,29 +230,63 @@ export default () => {
         })
         setShowDetails(true)
         setSignLoading(false)
-        setSucess('Message Signed Successsfully')
-        navigate('/buy_nft')
+        stesArray.push(3)
+        setSucess('Message Signed Successsfully');
+        const values = new URLSearchParams()
+        values.set('signature', signature);
+        values.set('salt', salt as any);
+        values.set('tokenContract', tokenContract)
+        values.set('quantity', quantity)
+        values.set('minPrice', minPrice);
+        values.set('price', state.price as any)
+        values.set('royality', state.royality as any);
 
+        (window as any).document.getElementById("Close-Modal").click()
+        navigate({ pathname: '/buy_nft', search: values.toString() })
     }
 
-
-
+    const handleImage = async (e: any) => {
+        let file = e.target.files[0]
+        let image = URL.createObjectURL(file)
+        setUploadImage(image)
+        setImageUrl(file)
+    }
 
     const mintNow = async () => {
         setMintLoading(true)
-        const { contract } = await getERC721Contract();
-        const contractRes = await contract.functions.mint(state.mint_URI, Number(state.royality))
-        const waitRes = await contractRes.wait()
-        await approveMarktplace()
-        await signMyToken()
         // debugger
-    }
+        try {
+            const { contract } = await getERC721Contract();
+            const formData = new FormData()
+            formData.append('file', imagesUrl)
+            const res1 = await axios.post(
+                "https://staging.acria.market:2083/upload/ipfs/file",
+                formData
+            );
 
+            let items = { image: `ipfs://${res1.data.data}`, price: state.price, name: state.name, description: state.description }
+            const metadata = JSON.stringify(items)
+            console.log(metadata);
+
+            let result = await axios.post('https://staging.acria.market:2083/Upload/ipfs/metadata', { metadata: metadata })
+            console.log(result.data.data);
+
+            const contractRes = await contract.functions.mint(result.data.data, Number(state.royality))
+            const waitRes = await contractRes.wait()
+            await approveMarktplace()
+            await signMyToken()
+            debugger
+
+        } catch (error) {
+
+        }
+    }
 
 
     return <Fragment>
         <div className="container">
             <h1 className="text-center text-secondary">Nft Task</h1>
+
             <div className="nft-card text-center">
                 <div className="connect-Wallert">
                     <div className="wallert-addrs h5">
@@ -258,7 +302,7 @@ export default () => {
                 </div>
 
                 {/* {<div className={`nft-card ${mintForm && 'd-none'}`}> */}
-                <div className="input-field">
+                {/* <div className="input-field">
 
                     <div className="m-2">
                         <input type="text" value={state.mint_URI} placeholder="Enter URI" name="mint_URI" className="form-control" onChange={handleState} required />
@@ -270,25 +314,73 @@ export default () => {
                     <div className="m-2">
                         <input type="text" value={state.royality} placeholder="Enter Royality" name="royality" className="form-control" onChange={handleState} required />
                     </div>
-                </div>
+                </div> */}
 
                 {/* </div>} */}
+                <div className="create-nft">
+                    <div className="nft-card">
+                        <div className="nft-image my-5 text-center">
+                            <input type="file" className="form-control" onChange={(e: any) => handleImage(e)} />
+                            <div className="my-4">
+                                <img src={uploadImage} alt="" />
+                            </div>
+                        </div>
+                        <div className="nft-details form-control">
+                            <div className="name m-2">
+                                <label htmlFor="Name" className="mb-2">
+                                    Name:
+                                </label>
+                                <input type="text" id="Name" className="form-control" name='name' placeholder="New NFT" onChange={handleState} />
+                            </div>
+                            <div className="price m-2">
+                                <label htmlFor="Price" className="mb-2">
+                                    Price:
+                                </label>
+                                <input type="text" id="Price" placeholder="0.01" className="form-control" name='price' onChange={handleState} />
+                            </div>
+                            <div className="description m-2">
+                                <label htmlFor="Description" className="mb-2">
+                                    Description:
+                                </label>
+                                <input type="text" id="Description" className="form-control" placeholder="NFT Details" name='description' onChange={handleState} />
+                            </div>
+                            <div className="royality m-2">
+                                <label htmlFor="Royality" className="mb-2">
+                                    Royality:
+                                </label>
+                                <input type="text" id="Royality" placeholder="10%" className="form-control" name='royality' onChange={handleState} />
+                            </div>
+                            {/* <select className="form-select my-3 m-2" aria-label="Default select example">
+                                <option selected>Open this select menu</option>
+                                <option value="1">One</option>
+                                <option value="2">Two</option>
+                                <option value="3">Three</option>
+                            </select> */}
+                            <div className="end-date">
+
+                            </div>
+                        </div>
+                        {/* <div className="mint-btn text-center mt-3">
+                            <button className="btn btn-primary" onClick={mintNow}>createNFT</button>
+                        </div> */}
+                    </div>
+                </div>
                 <button className={`btn btn-primary m-1 `}
-                    // className={`btn btn-primary m-1 ${mintForm && 'd-none'}`}
-                    data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={mintNow}
-                    // disabled={(URI?.length <= 41 || price?.length === undefined || royality?.length === undefined)}
-                    disabled={!(state.mint_URI && state.price && state.royality)}
+                    data-bs-toggle="modal" data-bs-target="#exampleModal"
+                    onClick={mintNow}
+                // disabled={!(state.mint_URI && state.price && state.royality)}
                 >Mint now</button>
-                <div className={`modal fade modal-dialog modal-dialog-centered ${handleModal && 'd-none'}`} id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div className={`modal fade modal-dialog modal-dialog-centered`} id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden='true'>
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title text-primary" id="exampleModalLabel">Process Details</h5>
-                                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" id="Close-Modal" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div className="modal-body">
                                 <div className="text-start">
                                     <h3>
+                                        {!mintLoading && <img src={stesArray?.includes(1) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
                                         {mintLoading &&
                                             <Spinner />
                                         }
@@ -297,6 +389,7 @@ export default () => {
                                 </div>
                                 <div className="text-start">
                                     <h3>
+                                        {!checkAsign && <img src={stesArray?.includes(2) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
                                         {checkAsign &&
                                             <Spinner />}
                                         checkingAprroval
@@ -304,6 +397,7 @@ export default () => {
                                 </div>
                                 <div className="text-start">
                                     <h3>
+                                        {!signLoading && <img src={stesArray?.includes(3) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
                                         {signLoading &&
                                             <Spinner />}
                                         Signing Message
@@ -316,25 +410,12 @@ export default () => {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                {/* <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button> */}
                             </div>
                         </div>
                     </div>
                 </div>
 
             </div>
-            {
-                showDetails && <div className="sign-details-card">
-                    <h1>Signature :</h1> {tokenValue.signature}
-                    <h1>salt :</h1> {tokenValue.salt}
-                    <h1>tokenContract :</h1> {tokenValue.tokenContract}
-                    <h1>endTime :</h1> {tokenValue.endTime}
-                    <h1>quantity : </h1>{tokenValue.quantity}
-                    <h1>owner : </h1>{tokenValue.owner}
-                    <h1>Price : </h1>{tokenValue.minPrice}
-                    {/* <h1>auctionType : </h1>{auctionType} */}
-                </div>
-            }
             <div className="error-msg">
                 <h5 className="text-warning">
                     {errorMessage}
