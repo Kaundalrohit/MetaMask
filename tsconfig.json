@@ -22,6 +22,6 @@
   },
   "include": [
     "src",
-    "src/Components/NFT/Nft.tsx"
+    "src/Components/Create-Buy-NFT/Nft.tsx"
   ]
 }

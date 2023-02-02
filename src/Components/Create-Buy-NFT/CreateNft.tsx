@@ -3,19 +3,17 @@ import { Fragment, useState } from "react"
 import VoucherRohit from "../../utils/VoucherRohit"
 import EhisabERC721 from '../../artifacts/EhisabERC721.json'
 import MARKETPLACE_ARTIFACTS from '../../artifacts/EhisabMarketplace.json'
-import Erc1155 from '.././../artifacts/Erc1155.json'
-import IERC20 from '../../artifacts/IERC20'
 import Spinner from "./Spinner"
 import { useNavigate } from "react-router-dom"
 import successImg from "./Images/icons8-checkmark-96.png"
 import pendingImg from "./Images/icons8-hourglass-90.png"
-import { toast } from "react-toastify"
 import axios from "axios"
 
 // export const STAGING_ERC721_CONTRACT_ADDRESS_KEY = '0xD698750211A7CE987E7f1964a5EAE82F3C5c49dF'//staging
-export const MARKETPLACE_ADDRESS = "0xc047A78f99458D56932b761a93D6CfCB13Bd298c"
+export const MARKETPLACE_ADDRESS = "0xD14B3d04b08608c26D39B59A50A65D1D5F590Da8"
 export const ERC721_ADDRESS = "0xf96cdb86aed0898a8f1aab7158b71b90797e1545"
 export const ERC20_address = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
+export const WETH_GOERLI_ADDRESS_KEY = '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6'
 export const Mint_URI_ADDRESS = "QmPXYB9JFUhioiiGWeVCMMQ9nmrsynNLJc91T3ArdKnpZh"
 export const ethereumInstalled = () => {
     return (window as any).ethereum
@@ -24,25 +22,19 @@ export const ethereumInstalled = () => {
 export const stesArray = [] as any
 export default () => {
     const navigate = useNavigate()
-
-
-    const PURCHASE_TIME_TAX = 10
     // const STAGING_MARKET_PLACE_CONTRACT_ADDRESS_KEY = '0x7d2022B2A05575EF11Db46F1D50a9Cca493c6e4e'//staging
-
-
     const [errorMessage, setErrorMessage] = useState<any>(null);
     const [defaultAccount, setDefaultAccount] = useState<any>(null);
     const [userBalance, setUserBalance] = useState<any>(null);
     const [uploadImage, setUploadImage] = useState('')
     const [imagesUrl, setImageUrl] = useState<any>('')
+    const [handleNftCard, setHandleNftCard] = useState(false)
 
     const [connButtonText, setConnButtonText] = useState<any>('Connect Wallet');
-    // const [mintForm, setMintForm] = useState(true)
-    const [showDetails, setShowDetails] = useState(false)
     const [mintLoading, setMintLoading] = useState(false)
     const [checkAsign, setCheckAsign] = useState(false)
     const [signLoading, setSignLoading] = useState(false)
-    const [handleModal, setHandleModal] = useState(true)
+    const [ipfsLoading, setIpfsLoading] = useState(false)
     const [sucess, setSucess] = useState('')
 
     const [tokenValue, setTokenValue] = useState<any>({
@@ -67,21 +59,6 @@ export default () => {
             [e.target.name]: e.target.value
         })
     }
-
-    // const [state, setState] = useState({
-    //     mint_URI: '',
-    //     price: "",
-    //     royality: ''
-    // })
-
-    // const handleState = (event: any) => {
-    //     setState({
-    //         ...state,
-    //         [event.target.name]: event.target.value
-    //     })
-    // }
-
-
 
     window.onload = (event: any) => {
         // isConnected();
@@ -187,7 +164,7 @@ export default () => {
 
     const approveMarktplace = async () => {
         setMintLoading(false)
-        stesArray.push(1)
+        stesArray.push(2)
         setCheckAsign(true)
         try {
             const { contract, accounts } = await getERC721Contract();
@@ -209,40 +186,31 @@ export default () => {
         }
     }
 
-    const signMyToken = async () => {
+    const signMyToken = async (imageCid: string) => {
         setCheckAsign(false)
-        stesArray.push(2)
+        stesArray.push(3)
         setSignLoading(true)
         const { contract, accounts, signer } = await getMarketPlaceContract()
         const ether = ethers.utils.parseEther(Number(state.price).toFixed(18));
         await VoucherRohit.setToken(contract, signer);
-        const { signature, salt, tokenContract, endTime, quantity, owner, minPrice } = await VoucherRohit.CreateVoucher(accounts[0], 1, Number(1), 0, ether, ERC721_ADDRESS);
-        setTokenValue({
-            ...tokenValue,
-            signature: signature,
-            salt: salt,
-            tokenContract: tokenContract,
-            endTime: endTime,
-            quantity: quantity,
-            owner: owner,
-            minPrice: minPrice?._hex,
-            // auctionType: auctionType
-        })
-        setShowDetails(true)
+        const { signature, salt, tokenContract, endTime, quantity, owner, auctionType } = await VoucherRohit.CreateVoucher(accounts[0], 1, 1, 0, ether, ERC721_ADDRESS);
+
+        console.log('voucher', 'signature ', signature, 'salt ', salt, 'tokenContract ', tokenContract, 'endTime ', endTime, 'quantity', quantity, 'owner ', owner, auctionType);
+
         setSignLoading(false)
-        stesArray.push(3)
+        stesArray.push(4)
         setSucess('Message Signed Successsfully');
         const values = new URLSearchParams()
         values.set('signature', signature);
         values.set('salt', salt as any);
         values.set('tokenContract', tokenContract)
         values.set('quantity', quantity)
-        values.set('minPrice', minPrice);
+        values.set('owner', owner);
         values.set('price', state.price as any)
         values.set('royality', state.royality as any);
 
         (window as any).document.getElementById("Close-Modal").click()
-        navigate({ pathname: '/buy_nft', search: values.toString() })
+        navigate({ pathname: `/buy_nft/${imageCid}`, search: values.toString() })
     }
 
     const handleImage = async (e: any) => {
@@ -253,7 +221,8 @@ export default () => {
     }
 
     const mintNow = async () => {
-        setMintLoading(true)
+        setHandleNftCard(true)
+        setIpfsLoading(true)
         // debugger
         try {
             const { contract } = await getERC721Contract();
@@ -264,17 +233,23 @@ export default () => {
                 formData
             );
 
+            let imageCid = new URLSearchParams()
+            imageCid.set('imageCid', imageCid as any)
             let items = { image: `ipfs://${res1.data.data}`, price: state.price, name: state.name, description: state.description }
             const metadata = JSON.stringify(items)
             console.log(metadata);
 
             let result = await axios.post('https://staging.acria.market:2083/Upload/ipfs/metadata', { metadata: metadata })
             console.log(result.data.data);
-
+            setIpfsLoading(false)
+            stesArray.push(1)
+            setMintLoading(true)
             const contractRes = await contract.functions.mint(result.data.data, Number(state.royality))
             const waitRes = await contractRes.wait()
+            console.log('waitRes', waitRes);
+
             await approveMarktplace()
-            await signMyToken()
+            await signMyToken(res1.data.data)
             debugger
 
         } catch (error) {
@@ -285,10 +260,10 @@ export default () => {
 
     return <Fragment>
         <div className="container">
-            <h1 className="text-center text-secondary">Nft Task</h1>
+            <h1 className="text-center text-secondary fw-bold">Nft Task</h1>
 
-            <div className="nft-card text-center">
-                <div className="connect-Wallert">
+            <div className="nft-card">
+                <div className="connect-Wallert text-center">
                     <div className="wallert-addrs h5">
                         Address:{defaultAccount}
                     </div>
@@ -297,55 +272,43 @@ export default () => {
                     </div>
                 </div>
 
-                <div className="wallert-connect-btn">
+                <div className="wallert-connect-btn text-center">
                     <button className="btn btn-sm btn-primary" onClick={getMyProvider}>{connButtonText}</button>
                 </div>
-
-                {/* {<div className={`nft-card ${mintForm && 'd-none'}`}> */}
-                {/* <div className="input-field">
-
-                    <div className="m-2">
-                        <input type="text" value={state.mint_URI} placeholder="Enter URI" name="mint_URI" className="form-control" onChange={handleState} required />
-                    </div>
-                    <div className="m-2">
-                        <input type="text" value={state.price} placeholder="Enter Prize" name="price"
-                            className="form-control" onChange={handleState} required />
-                    </div>
-                    <div className="m-2">
-                        <input type="text" value={state.royality} placeholder="Enter Royality" name="royality" className="form-control" onChange={handleState} required />
-                    </div>
-                </div> */}
-
-                {/* </div>} */}
-                <div className="create-nft">
+                <div className={`create-nft ${handleNftCard && 'd-none'}`}>
                     <div className="nft-card">
-                        <div className="nft-image my-5 text-center">
+                        <div className="nft-image my-3 text-center">
+                            {uploadImage &&
+                                <div className="my-4"
+                                //  style={{ width: "300px", height: "300px" }}
+                                >
+                                    <h3 className="text-primary">Image Preview</h3>
+                                    <img src={uploadImage} className="rounded-4" alt="" width="250px" height="250px" />
+                                </div>
+                            }
                             <input type="file" className="form-control" onChange={(e: any) => handleImage(e)} />
-                            <div className="my-4">
-                                <img src={uploadImage} alt="" />
-                            </div>
                         </div>
-                        <div className="nft-details form-control">
+                        <div className="nft-details form-control shadow p-4">
                             <div className="name m-2">
-                                <label htmlFor="Name" className="mb-2">
+                                <label htmlFor="Name" className="mb-2 fw-bolder">
                                     Name:
                                 </label>
                                 <input type="text" id="Name" className="form-control" name='name' placeholder="New NFT" onChange={handleState} />
                             </div>
                             <div className="price m-2">
-                                <label htmlFor="Price" className="mb-2">
+                                <label htmlFor="Price" className="mb-2 fw-bolder">
                                     Price:
                                 </label>
                                 <input type="text" id="Price" placeholder="0.01" className="form-control" name='price' onChange={handleState} />
                             </div>
                             <div className="description m-2">
-                                <label htmlFor="Description" className="mb-2">
+                                <label htmlFor="Description" className="mb-2 fw-bolder" >
                                     Description:
                                 </label>
                                 <input type="text" id="Description" className="form-control" placeholder="NFT Details" name='description' onChange={handleState} />
                             </div>
                             <div className="royality m-2">
-                                <label htmlFor="Royality" className="mb-2">
+                                <label htmlFor="Royality" className="mb-2 fw-bolder">
                                     Royality:
                                 </label>
                                 <input type="text" id="Royality" placeholder="10%" className="form-control" name='royality' onChange={handleState} />
@@ -360,16 +323,15 @@ export default () => {
 
                             </div>
                         </div>
-                        {/* <div className="mint-btn text-center mt-3">
-                            <button className="btn btn-primary" onClick={mintNow}>createNFT</button>
-                        </div> */}
+                    </div>
+                    <div className="text-center my-3">
+                        <button className={`btn btn-primary m-1 `}
+                            data-bs-toggle="modal" data-bs-target="#exampleModal"
+                            onClick={mintNow}
+                            disabled={!(state.name && state.price && state.royality && state.description)}
+                        >Mint now</button>
                     </div>
                 </div>
-                <button className={`btn btn-primary m-1 `}
-                    data-bs-toggle="modal" data-bs-target="#exampleModal"
-                    onClick={mintNow}
-                // disabled={!(state.mint_URI && state.price && state.royality)}
-                >Mint now</button>
                 <div className={`modal fade modal-dialog modal-dialog-centered`} id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden='true'>
                     <div className="modal-dialog">
                         <div className="modal-content">
@@ -378,30 +340,41 @@ export default () => {
                                 <button type="button" id="Close-Modal" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div className="modal-body">
-                                <div className="text-start">
-                                    <h3>
-                                        {!mintLoading && <img src={stesArray?.includes(1) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
-                                        {mintLoading &&
-                                            <Spinner />
-                                        }
-                                        Minting
-                                    </h3>
+                                <div className="text-start d-flex">
+                                    <div className="">
+                                        {!ipfsLoading ? <img src={stesArray?.includes(1) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Upload Files</h5>
+                                        <h6>Adding your asset to IPFS</h6>
+                                    </div>
                                 </div>
-                                <div className="text-start">
-                                    <h3>
-                                        {!checkAsign && <img src={stesArray?.includes(2) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
-                                        {checkAsign &&
-                                            <Spinner />}
-                                        checkingAprroval
-                                    </h3>
+                                <div className="text-start d-flex my-2">
+                                    <div className="">
+                                        {!mintLoading ? <img src={stesArray?.includes(2) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Mint Token</h5>
+                                        <h6>Adding your asset to blockchain</h6>
+                                    </div>
                                 </div>
-                                <div className="text-start">
-                                    <h3>
-                                        {!signLoading && <img src={stesArray?.includes(3) ? successImg : pendingImg} alt="" width='40px' height='40px' />}
-                                        {signLoading &&
-                                            <Spinner />}
-                                        Signing Message
-                                    </h3>
+                                <div className="text-start d-flex">
+                                    <div className="">
+                                        {!checkAsign ? <img src={stesArray?.includes(3) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Approve Request</h5>
+                                        <h6>Approve trasaction with your Wallert</h6>
+                                    </div>
+
+                                </div>
+                                <div className="text-start d-flex my-2">
+                                    <div className="">
+                                        {!signLoading ? <img src={stesArray?.includes(4) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Signing & Listing your asset</h5>
+                                    </div>
                                 </div>
                                 <div className="text-start">
                                     <h3 className="text-primary">

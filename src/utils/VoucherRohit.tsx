@@ -1,7 +1,7 @@
 import { BigNumber, ethers } from 'ethers';
 
-const SIGNING_DOMAIN_NAME = "v3nus.io";
-const SIGNING_DOMAIN_VERSION = "1";
+const SIGNING_DOMAIN_NAME = "everlens.io";
+const SIGNING_DOMAIN_VERSION = "3";
 
 let _contract: any = null;
 let _signer: any = null;
