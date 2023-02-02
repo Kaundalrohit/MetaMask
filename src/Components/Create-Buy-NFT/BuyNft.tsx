@@ -3,7 +3,7 @@ import { Fragment, useEffect, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import IERC20 from "../../artifacts/IERC20"
 import GoerliMarketplace from "../../artifacts/GoerliMarketplace.json"
-import { ERC20_address, ethereumInstalled, MARKETPLACE_ADDRESS, WETH_GOERLI_ADDRESS_KEY } from "./CreateNft"
+import { ethereumInstalled, MARKETPLACE_ADDRESS, WETH_GOERLI_ADDRESS_KEY } from "./CreateNft"
 
 const PURCHASE_TIME_TEX = 3
 export default () => {
