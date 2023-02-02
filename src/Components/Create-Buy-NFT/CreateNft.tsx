@@ -92,9 +92,6 @@ export default () => {
     (window as any).ethereum.on('chainChanged', chainChangedHandler);
 
 
-
-
-
     const handleImage = async (e: any) => {
         let file = e.target.files[0]
         let image = URL.createObjectURL(file)
@@ -132,21 +129,21 @@ export default () => {
 
     return <Fragment>
         <Navbar />
-        <div className="container-fluid" style={{ background: "cyan", height: '674px' }}>
+        <div className="container-fluid" style={{ background: "#232946", height: '674px' }}>
             {/* <h1 className="text-center text-secondary fw-bold">Nft Task</h1> */}
 
             <div className="nft-card">
                 <div className="connect-Wallert text-center">
-                    <div className="wallert-addrs h5">
+                    <div className="wallert-addrs h5" style={{ color: '#b8c1ec' }}>
                         Address:{defaultAccount}
                     </div>
-                    <div className="wallert-blnc h5">
+                    <div className="wallert-blnc h5" style={{ color: '#b8c1ec' }}>
                         Balance:{userBalance}
                     </div>
                 </div>
 
                 <div className="wallert-connect-btn text-center">
-                    <button className="btn btn-sm btn-primary" onClick={loginWithMetamaskConnect}>{connButtonText}</button>
+                    <button className="btn btn-sm" style={{ background: '#eebbc3', color: '#232946' }} onClick={loginWithMetamaskConnect}>{connButtonText}</button>
                 </div>
                 <div className={`create-nft`}>
                     <div className="nft-card">
@@ -160,7 +157,7 @@ export default () => {
                             }
                             <input type="file" className="form-control" onChange={(e: any) => handleImage(e)} />
                         </div>
-                        <div className="nft-details form-control shadow p-4">
+                        <div className="nft-details form-control ">
                             <div className="name m-2">
                                 <label htmlFor="Name" className="mb-2 fw-bolder">
                                     Name:
@@ -177,12 +174,15 @@ export default () => {
                                 <label htmlFor="Royality" className="mb-2 fw-bolder">
                                     Royality:
                                 </label>
-                                <input type="text" id="Royality" placeholder="10%" className="form-control" name='royality' onChange={handleState} />
+                                <input type="text" id="Royality" placeholder="10%"
+                                    className="form-control"
+                                    name='royality' onChange={handleState} />
                             </div>
                         </div>
                     </div>
                     <div className="text-center my-3">
-                        <button className={`btn btn-primary m-1 `}
+                        <button className={`btn m-1 `}
+                            style={{ background: '#ffc0ad', color: '#271c19' }}
                             data-bs-toggle="modal" data-bs-target="#exampleModal"
                             onClick={createNft}
                         // disabled={!(state.name && state.price && state.royality && state.description)}
