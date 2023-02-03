@@ -3,35 +3,41 @@ import { Fragment, useEffect, useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import IERC20 from "../../artifacts/IERC20"
 import GoerliMarketplace from "../../artifacts/GoerliMarketplace.json"
-import { ethereumInstalled, MARKETPLACE_ADDRESS, WETH_GOERLI_ADDRESS_KEY } from "./CreateNft"
+import { getContract, MARKETPLACE_ADDRESS, WETH_GOERLI_ADDRESS_KEY } from "./Common/Common"
+import { btnStyle } from "./CreateNft"
+import Navbar from "./Navbar"
 
 const PURCHASE_TIME_TEX = 3
 export default () => {
-    const { imageCid } = useParams()
     const location = useLocation()
     const uRLSearchParams = new URLSearchParams(location.search)
-    const imageUrl = `https://ipfs.io/ipfs/${imageCid}`
+
 
     const owner_address = uRLSearchParams.get('owner');
     const salt = uRLSearchParams.get('salt');
     const tokenContract = uRLSearchParams.get('tokenContract');
     const quantity = uRLSearchParams.get('quantity');
-    const token_id = "0x015c"
+    const token_Id = uRLSearchParams.get('token_Id');
     const price = uRLSearchParams.get('price');
-    const royality = uRLSearchParams.get('royality');
+    // const royality = uRLSearchParams.get('royality');
     const signature = uRLSearchParams.get('signature');
-    const end_date = uRLSearchParams.get('end_date');
-    const auction_type = 1
+    const end_date = uRLSearchParams.get('endTime');
+    const image_CID = uRLSearchParams.get('image_CID');
+    const auctionType = uRLSearchParams.get('auctionType');
+
+    const nft_Image_URL = `https://ipfs.io/ipfs/${image_CID}`;
 
 
-    const getContract = async (address: string, abi: any) => {
-        const ethereum = ethereumInstalled()
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
-        const provider = new ethers.providers.Web3Provider(ethereum)
-        const signer = provider.getSigner()
-        const contract = new ethers.Contract(address, abi, signer);
-        return { contract, accounts, provider, signer }
-    }
+
+
+    // const getContract = async (address: string, abi: any) => {
+    //     const ethereum = ethereumInstalled()
+    //     const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
+    //     const provider = new ethers.providers.Web3Provider(ethereum)
+    //     const signer = provider.getSigner()
+    //     const contract = new ethers.Contract(address, abi, signer);
+    //     return { contract, accounts, provider, signer }
+    // }
 
     const calculateWrappedAmount = (price: any, quantity: any, tax: number) => {
         const priceWithQuantity = Number(price) * Number(quantity)
@@ -88,11 +94,11 @@ export default () => {
     const buy721 = async () => {
         try {
             let _etherPrice = ethers.utils.parseEther(Number(price).toFixed(18));
-            let _token_id = BigNumber.from(token_id)
-            let _end_date = Math.round(Number(0) / 1000)
-            const voucher = [_token_id, _etherPrice, auction_type, Number(quantity), _end_date, Number(salt)]
+            let _token_id = BigNumber.from(token_Id)
+            // let _end_date = end_date
+            const voucher = [_token_id, _etherPrice, auctionType, Number(quantity), end_date, Number(salt)]
 
-            let contractRes = await finaliseAuction(owner_address as string, voucher, signature as string, price, Number(quantity), tokenContract as string, WETH_GOERLI_ADDRESS_KEY, Number(auction_type));
+            let contractRes = await finaliseAuction(owner_address as string, voucher, signature as string, price, Number(quantity), tokenContract as string, WETH_GOERLI_ADDRESS_KEY, Number(auctionType));
             console.log('contractRes', contractRes);
         } catch (error) {
             console.log('contractRes error', error);
@@ -103,43 +109,48 @@ export default () => {
 
     return (
         <Fragment>
+            <Navbar heading={'BUY__NFT'} />
             <div className="container">
+                <h1 className="text-center my-3 heading-color fw-bold ">Nft Dtails</h1>
                 {/* {
                     showDetails &&  */}
-                <div className="sign-details shadow  rounded-2 mx-auto"
+                <div className="sign-details rounded-2 mx-auto"
                 // style={{
                 //     width: "1000px", height: '1000px'
                 // }}
                 >
-                    <h1 className="text-center my-3 text-secondary fw-bold">Your Nft Dtails</h1>
-                    <div className="nft-card">
+                    <div className="nft-card shadow">
                         <div className="nft-image text-center ">
-                            <img src={imageUrl} alt="" className="rounded-3" width="300px" height="300px" />
+                            <img src={nft_Image_URL} alt="" className="rounded-3" width="300px" height="300px" />
                         </div>
                         <div className="details m-4">
                             <div className="d-flex">
-                                <h5 className="fw-bolder">Owned By:</h5>
-                                <h6 className="ms-3 mt-1 text-decoration-underline">{owner_address}</h6>
+                                <h5 className="fw-bolder heading-color">Owned By:</h5>
+                                <h6 className="ms-3 mt-1 text-decoration-underline text-color">{owner_address}</h6>
                             </div>
                             <div className="d-flex">
-                                <h5 className="fw-bolder">Salt:</h5>
-                                <h6 className="ms-3 mt-1">{salt}</h6>
+                                <h5 className="fw-bolder heading-color">Salt:</h5>
+                                <h6 className="ms-3 mt-1 text-color">{salt}</h6>
                             </div>
                             <div className="my-2">
-                                <h5 className="fw-bolder">Signature:</h5>
-                                <span className="text-decoration-underline">{signature}</span>
+                                <h5 className="fw-bolder heading-color">Signature:</h5>
+                                <span className="text-decoration-underline text-color">{signature}</span>
                             </div>
                             <div className="d-flex">
-                                <h5 className="fw-bolder">TokenContract :</h5>
-                                <h6 className="ms-3 mt-1 text-decoration-underline">{tokenContract}</h6>
+                                <h5 className="fw-bolder heading-color">TokenContract :</h5>
+                                <h6 className="ms-3 mt-1 text-decoration-underline text-color">{tokenContract}</h6>
                             </div>
                             <div className="my-2 d-flex">
-                                <h5 className="fw-bolder">Quantity :</h5>
-                                <h6 className="ms-3 mt-1 ">{quantity}</h6>
+                                <h5 className="fw-bolder heading-color">Quantity :</h5>
+                                <h6 className="ms-3 mt-1 text-color">{quantity}</h6>
                             </div>
                             <div className="d-flex">
-                                <h5 className="fw-bolder">Price :</h5>
-                                <h6 className="ms-3 mt-1">{price as any}</h6>
+                                <h5 className="fw-bolder heading-color">Price :</h5>
+                                <h6 className="ms-3 mt-1 text-color">{price as any}</h6>
+                            </div>
+                            <div className="d-flex">
+                                <h5 className="fw-bolder heading-color">End_Date :</h5>
+                                <h6 className="ms-3 mt-1 text-color">{end_date}</h6>
                             </div>
 
                         </div>
@@ -157,7 +168,7 @@ export default () => {
 
                 <div className="buy-nft text-center my-3">
                     <div className="but-nft">
-                        <button className="btn btn-primary" onClick={buy721}>buy721</button>
+                        <button className="btn" style={btnStyle} onClick={buy721}>buy721</button>
                     </div>
                 </div>
 

@@ -1,16 +1,18 @@
 import { Fragment } from "react"
 import nftImage from "./Images/nft.jpg"
-
-export default () => {
+type props = {
+    heading: string
+}
+export default ({ heading }: props) => {
     return (
         <Fragment>
-            <nav className="navbar navbar" style={{ background: '#232946' }}>
+            <nav className="navbar navbar background-color">
                 <div className="navbar-brand d-flex" >
                     <div className="ms-2">
                         <img src={nftImage} width="50" height="50" className="d-inline-block align-top rounded-3" alt="" />
                     </div>
-                    <span className="ms-3 mt-2 fw-bold" style={{ color: "#fffffe" }}>
-                        CREATE_YOUR_NFT
+                    <span className="ms-3 mt-2 fw-bold heading-color">
+                        {heading}
                     </span>
                 </div>
             </nav>

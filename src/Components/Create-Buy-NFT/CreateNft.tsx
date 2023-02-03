@@ -3,17 +3,16 @@ import { Fragment, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import Navbar from "./Navbar"
+import successImg from "./Images/icons8-checkmark-96.png"
+import pendingImg from "./Images/icons8-hourglass-90.png"
+import { EhisabERC721_Abi, ERC721_ADDRESS, ethereumInstalled, getContract, getMyProvider, loginWithMetamaskConnect } from "./Common/Common"
+import Spinner from "./Spinner"
 
-export const MARKETPLACE_ADDRESS = "0xD14B3d04b08608c26D39B59A50A65D1D5F590Da8"
-export const ERC721_ADDRESS = "0xf96cdb86aed0898a8f1aab7158b71b90797e1545"
-// export const ERC20_address = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
-export const WETH_GOERLI_ADDRESS_KEY = '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6'
-export const Mint_URI_ADDRESS = "QmPXYB9JFUhioiiGWeVCMMQ9nmrsynNLJc91T3ArdKnpZh"
-export const ethereumInstalled = () => {
-    return (window as any).ethereum
+export const btnStyle = {
+    background: '#eebbc3', color: '#232946'
 }
 
-export const stesArray = [] as any
+const stepsArray = [] as any
 export default () => {
     const navigate = useNavigate()
     const [errorMessage, setErrorMessage] = useState<any>(null);
@@ -23,6 +22,10 @@ export default () => {
     const [imagesUrl, setImageUrl] = useState<any>('')
     const [connButtonText, setConnButtonText] = useState<any>('Connect Wallet');
 
+    const [mintLoading, setMintLoading] = useState(false)
+    const [ipfsLoading, setIpfsLoading] = useState(false)
+    const [handleModal, setHandleModal] = useState(true)
+    const [loading, setLoading] = useState(false)
 
     const [state, setState] = useState({
         name: '',
@@ -54,27 +57,6 @@ export default () => {
         }
     }
 
-    const loginWithMetamaskConnect = async () => {
-        const ethereum = ethereumInstalled()
-        if (ethereum) {
-            const networkVersion = ethereum.networkVersion
-            try {
-                const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
-                const eth_chainId = await ethereum.request({ method: 'eth_chainId' })
-                const provider = new ethers.providers.Web3Provider(ethereum)
-                setDefaultAccount(accounts[0])
-                return { accounts, eth_chainId, provider }
-            } catch (error) {
-                console.log("loginWithMetamaskConnect error", error);
-                return null
-            }
-        } else {
-            window.open(`https://metamask.app.link/dapp/${window.location.hostname}`)
-        }
-        console.log("loginWithMetamaskConnect null");
-        return null
-    }
-
     const accountChangedHandler = (newAccount: any) => {
         setDefaultAccount(newAccount);
         let balnc = newAccount.toString()
@@ -85,12 +67,25 @@ export default () => {
         window.location.reload();
     }
 
-
     // listen for account changes
     (window as any).ethereum.on('accountsChanged', accountChangedHandler);
 
     (window as any).ethereum.on('chainChanged', chainChangedHandler);
 
+    const connectToMetamask = async () => {
+        try {
+            const { accounts, balanceInEth }: any = await getMyProvider()
+            console.log('Connected_Account', accounts[0]);
+            console.log('Account_Balance', balanceInEth);
+            setDefaultAccount(accounts[0])
+            setUserBalance(balanceInEth)
+            setConnButtonText('Wallert Connected')
+        }
+        catch (error: any) {
+            console.log(error.message);
+            setErrorMessage(error.message)
+        }
+    }
 
     const handleImage = async (e: any) => {
         let file = e.target.files[0]
@@ -101,7 +96,10 @@ export default () => {
 
 
     const createNft = async () => {
+        setHandleModal(true)
+        setLoading(true)
         try {
+            setIpfsLoading(true)
             const formData = new FormData()
             formData.append('file', imagesUrl)
             const res1 = await axios.post(
@@ -111,47 +109,62 @@ export default () => {
 
             let items = { image: `ipfs://${res1.data.data}`, name: state.name, description: state.description }
             const metadata = JSON.stringify(items)
-            console.log(metadata);
+            console.log('metadata :=>', metadata);
 
             let result = await axios.post('https://staging.acria.market:2083/Upload/ipfs/metadata', { metadata: metadata })
+            setIpfsLoading(false)
+            stepsArray.push(1)
+            console.log(stepsArray)
+            setMintLoading(true)
+            const { contract } = await getContract(ERC721_ADDRESS, EhisabERC721_Abi);
+            const contractRes = await contract.functions.mint(result.data.data, Number(state.royality))
+            const waitRes = await contractRes.wait()
+            setMintLoading(false)
+            stepsArray.push(2)
+
+            console.log('waitRes :=>', waitRes);
+            console.log('token_id :=>', waitRes.events[0].args.tokenId._hex);
+
             const nftdetails = new URLSearchParams()
             nftdetails.set('name', state.name)
             nftdetails.set('description', state.description)
             nftdetails.set('image_CID', res1.data.data)
-            nftdetails.set('mint_CID', result.data.data)
+            nftdetails.set('token_Id', waitRes.events[0].args.tokenId._hex)
             nftdetails.set('royality', state.royality as any);
-            navigate({ pathname: '/sale_nft', search: nftdetails.toString() })
-            stesArray.push(1)
-        } catch (error) {
-
+            nftdetails.set('owner_Address', defaultAccount);
+            (window as any).document.getElementById("Close-Modal").click()
+            setLoading(false);
+            navigate({ pathname: '/sell_nft', search: nftdetails.toString() })
+        } catch (error: any) {
+            console.log(error);
+            setLoading(false);
+            (window as any).document.getElementById("Close-Modal").click()
         }
     }
+    console.log(stepsArray)
 
     return <Fragment>
-        <Navbar />
-        <div className="container-fluid" style={{ background: "#232946", height: '674px' }}>
-            {/* <h1 className="text-center text-secondary fw-bold">Nft Task</h1> */}
-
+        <Navbar heading={'CREATE__YOUR__NFT'} />
+        <div className="container-fluid">
             <div className="nft-card">
-                <div className="connect-Wallert text-center">
-                    <div className="wallert-addrs h5" style={{ color: '#b8c1ec' }}>
-                        Address:{defaultAccount}
+                <div className="connect-Wallert text-center heading-color">
+                    <div className="wallert-addrs h5">
+                        Address: <span className="text-color text-decoration-underline"> {defaultAccount}  </span>
                     </div>
-                    <div className="wallert-blnc h5" style={{ color: '#b8c1ec' }}>
-                        Balance:{userBalance}
+                    <div className="wallert-blnc h5 heading-color">
+                        Balance: <span className="text-color"> {userBalance} </span>
                     </div>
                 </div>
-
                 <div className="wallert-connect-btn text-center">
-                    <button className="btn btn-sm" style={{ background: '#eebbc3', color: '#232946' }} onClick={loginWithMetamaskConnect}>{connButtonText}</button>
+                    <button className="btn btn-sm" style={btnStyle} onClick={connectToMetamask}>{connButtonText}</button>
                 </div>
-                <div className={`create-nft`}>
+                {handleModal && <div className={`create-nft`}>
                     <div className="nft-card">
                         <div className="nft-image my-3 text-center">
                             {uploadImage &&
                                 <div className="my-4"
                                 >
-                                    <h3 className="text-primary">Image Preview</h3>
+                                    <h3 className="heading-color">Image Preview</h3>
                                     <img src={uploadImage} className="rounded-4" alt="" width="250px" height="250px" />
                                 </div>
                             }
@@ -180,16 +193,47 @@ export default () => {
                             </div>
                         </div>
                     </div>
-                    <div className="text-center my-3">
-                        <button className={`btn m-1 `}
-                            style={{ background: '#ffc0ad', color: '#271c19' }}
-                            data-bs-toggle="modal" data-bs-target="#exampleModal"
-                            onClick={createNft}
-                        // disabled={!(state.name && state.price && state.royality && state.description)}
-                        >Create NFT</button>
+                </div>}
+            </div>
+            <div className="text-center my-3">
+                <button className={`btn m-1 `}
+                    style={btnStyle}
+                    onClick={createNft}
+                    data-bs-toggle="modal" data-bs-target="#exampleModal"
+                // disabled={!(state.name && state.price && state.royality && state.description)}
+                >{loading ? <Spinner /> : 'Create_NFT'}</button>
+                <div className="modal fade" id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden='true'>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title text-primary" id="exampleModalLabel">Process Details</h5>
+                                <button type="button" id="Close-Modal" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="text-start d-flex my-2">
+                                    <div className="">
+                                        {!ipfsLoading ? <img src={stepsArray?.includes(1) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Upload Files</h5>
+                                        <h6>Adding your asset to IPFS</h6>
+                                    </div>
+                                </div>
+                                <div className="text-start d-flex my-2">
+                                    <div className="">
+                                        {!mintLoading ? <img src={stepsArray?.includes(2) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
+                                    </div>
+                                    <div className="ms-2">
+                                        <h5 className="fw-bolder">Mint Token</h5>
+                                        <h6>Adding your asset to blockchain</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div className="error-msg">
                 <h5 className="text-warning">
                     {errorMessage}
