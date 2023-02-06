@@ -2,15 +2,28 @@ import { ethers } from "ethers"
 import { Fragment, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
-import Navbar from "./Navbar"
-import successImg from "./Images/icons8-checkmark-96.png"
-import pendingImg from "./Images/icons8-hourglass-90.png"
+import Navbar from "./Common/Navbar"
 import { EhisabERC721_Abi, ERC721_ADDRESS, ethereumInstalled, getContract, getMyProvider, loginWithMetamaskConnect } from "./Common/Common"
-import Spinner from "./Spinner"
+import Spinner from "./Common/Spinner"
+import Modal from "./Common/Modal"
 
 export const btnStyle = {
     background: '#eebbc3', color: '#232946'
+
 }
+
+const modalText = [
+    {
+        id: 1,
+        heading: 'Upload Files',
+        text: 'Adding your asset to IPFS'
+    },
+    {
+        id: 2,
+        heading: 'Mint Token',
+        text: 'Adding your asset to blockchain'
+    }
+]
 
 const stepsArray = [] as any
 export default () => {
@@ -96,49 +109,56 @@ export default () => {
 
 
     const createNft = async () => {
-        setHandleModal(true)
-        setLoading(true)
         try {
-            setIpfsLoading(true)
-            const formData = new FormData()
-            formData.append('file', imagesUrl)
-            const res1 = await axios.post(
-                "https://staging.acria.market:2083/upload/ipfs/file",
-                formData
-            );
+            if (imagesUrl.length !== 0 && state.name.length !== 0 && state.description.length !== 0 && (state.royality as any).length !== 0) {
+                setHandleModal(true)
+                setLoading(true)
+                setIpfsLoading(true)
+                const formData = new FormData()
+                formData.append('file', imagesUrl)
+                const res1 = await axios.post(
+                    "https://staging.acria.market:2083/upload/ipfs/file",
+                    formData
+                );
 
-            let items = { image: `ipfs://${res1.data.data}`, name: state.name, description: state.description }
-            const metadata = JSON.stringify(items)
-            console.log('metadata :=>', metadata);
+                let items = { image: `ipfs://${res1.data.data}`, name: state.name, description: state.description }
+                const metadata = JSON.stringify(items)
+                console.log('metadata :=>', metadata);
 
-            let result = await axios.post('https://staging.acria.market:2083/Upload/ipfs/metadata', { metadata: metadata })
-            setIpfsLoading(false)
-            stepsArray.push(1)
-            console.log(stepsArray)
-            setMintLoading(true)
-            const { contract } = await getContract(ERC721_ADDRESS, EhisabERC721_Abi);
-            const contractRes = await contract.functions.mint(result.data.data, Number(state.royality))
-            const waitRes = await contractRes.wait()
-            setMintLoading(false)
-            stepsArray.push(2)
+                let result = await axios.post('https://staging.acria.market:2083/Upload/ipfs/metadata', { metadata: metadata })
+                setIpfsLoading(false)
+                stepsArray.push(1)
+                console.log(stepsArray)
+                setMintLoading(true)
+                const { contract } = await getContract(ERC721_ADDRESS, EhisabERC721_Abi);
+                const contractRes = await contract.functions.mint(result.data.data, Number(state.royality))
+                const waitRes = await contractRes.wait()
+                setMintLoading(false)
+                stepsArray.push(2)
 
-            console.log('waitRes :=>', waitRes);
-            console.log('token_id :=>', waitRes.events[0].args.tokenId._hex);
+                console.log('waitRes :=>', waitRes);
+                console.log('Owner :=>', waitRes.from);
 
-            const nftdetails = new URLSearchParams()
-            nftdetails.set('name', state.name)
-            nftdetails.set('description', state.description)
-            nftdetails.set('image_CID', res1.data.data)
-            nftdetails.set('token_Id', waitRes.events[0].args.tokenId._hex)
-            nftdetails.set('royality', state.royality as any);
-            nftdetails.set('owner_Address', defaultAccount);
-            (window as any).document.getElementById("Close-Modal").click()
-            setLoading(false);
-            navigate({ pathname: '/sell_nft', search: nftdetails.toString() })
+                console.log('token_id :=>', waitRes.events[0].args.tokenId._hex);
+
+                const nftdetails = new URLSearchParams()
+                nftdetails.set('name', state.name)
+                nftdetails.set('description', state.description)
+                nftdetails.set('image_CID', res1.data.data)
+                nftdetails.set('token_Id', waitRes.events[0].args.tokenId._hex)
+                nftdetails.set('royality', state.royality as any);
+                nftdetails.set('owner_Address', waitRes.from);
+                (window as any).document.getElementById("Close-Modal").click()
+                setLoading(false);
+                navigate({ pathname: '/sell_nft', search: nftdetails.toString() })
+            }
+            else {
+                alert('hii')
+            }
         } catch (error: any) {
             console.log(error);
-            setLoading(false);
             (window as any).document.getElementById("Close-Modal").click()
+            setLoading(false);
         }
     }
     console.log(stepsArray)
@@ -209,26 +229,7 @@ export default () => {
                                 <h5 className="modal-title text-primary" id="exampleModalLabel">Process Details</h5>
                                 <button type="button" id="Close-Modal" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div className="modal-body">
-                                <div className="text-start d-flex my-2">
-                                    <div className="">
-                                        {!ipfsLoading ? <img src={stepsArray?.includes(1) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
-                                    </div>
-                                    <div className="ms-2">
-                                        <h5 className="fw-bolder">Upload Files</h5>
-                                        <h6>Adding your asset to IPFS</h6>
-                                    </div>
-                                </div>
-                                <div className="text-start d-flex my-2">
-                                    <div className="">
-                                        {!mintLoading ? <img src={stepsArray?.includes(2) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
-                                    </div>
-                                    <div className="ms-2">
-                                        <h5 className="fw-bolder">Mint Token</h5>
-                                        <h6>Adding your asset to blockchain</h6>
-                                    </div>
-                                </div>
-                            </div>
+                            <Modal loading={ipfsLoading} loading1={mintLoading} stepsArray={stepsArray} modalText={modalText} />
                         </div>
                     </div>
                 </div>

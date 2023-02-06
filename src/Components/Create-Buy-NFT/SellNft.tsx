@@ -2,21 +2,34 @@
 import { ethers } from "ethers";
 import dayjs from 'dayjs';
 import { RangePickerProps } from 'antd/es/date-picker';
-import { Button, DatePicker, Form, Input, Select, Space, Switch } from 'antd';
+import { DatePicker } from 'antd';
 import { Fragment, useState } from "react"
 import VoucherRohit from "../../utils/VoucherRohit";
-import successImg from "./Images/icons8-checkmark-96.png"
-import pendingImg from "./Images/icons8-hourglass-90.png"
-import Spinner from "./Spinner";
 import { useLocation, useNavigate } from "react-router-dom";
 import { EhisabERC721_Abi, ERC721_ADDRESS, getContract, MARKETPLACE_ADDRESS, MARKETPLACE_ARTIFACTS_Abi } from "./Common/Common";
 import { btnStyle } from "./CreateNft";
-import Navbar from "./Navbar";
+import Navbar from "./Common/Navbar";
+import Modal from "./Common/Modal";
+
+const stepsArray = [] as any
 
 export default () => {
     const navigate = useNavigate()
     const location = useLocation()
     const [timeStamp, setTimeStamp] = useState(0)
+
+    const modalText = [
+        {
+            id: 1,
+            heading: 'Approve Request',
+            text: 'Approve trasaction with your Wallert'
+        },
+        {
+            id: 2,
+            heading: 'Signing & Listing your asset',
+            text: ''
+        }
+    ]
 
     const moment = require('moment');
     const disabledDate: RangePickerProps['disabledDate'] = (current: any) => {
@@ -45,13 +58,10 @@ export default () => {
 
     const nft_Image_URL = `https://ipfs.io/ipfs/${image_CID}`;
 
-    const [mintLoading, setMintLoading] = useState(false)
     const [checkAsign, setCheckAsign] = useState(false)
     const [signLoading, setSignLoading] = useState(false)
-    const [showEndDate, setShowEndDate] = useState(false)
     const [auction, setAuction] = useState<number>(1)
     const [sucess, setSucess] = useState('')
-    const stesArray = [] as any
 
     const [state, setState] = useState({
         price: 0,
@@ -60,10 +70,12 @@ export default () => {
     console.log(state.price);
 
     const requestApprove = async (contract: any, address: string) => {
+        // debugger
         try {
             const trasactionRes = await contract.functions.setApprovalForAll(address, true);
             const transactionSuccess = await trasactionRes.wait();
-            // setCheckAsign(false)
+            setCheckAsign(false)
+            stepsArray.push(1)
             return transactionSuccess
         } catch (error: any) {
             return null
@@ -71,9 +83,8 @@ export default () => {
     }
 
     const approveMarktplace = async () => {
-        // setMintLoading(false)
-        // stesArray.push(2)
-        // setCheckAsign(true)
+        // debugger
+        setCheckAsign(true)
         try {
             const { contract, accounts } = await getContract(ERC721_ADDRESS, EhisabERC721_Abi);
             const isApproveForAllRes = await contract.functions.isApprovedForAll(accounts[0], MARKETPLACE_ADDRESS);
@@ -95,10 +106,10 @@ export default () => {
     }
 
     const signMyToken = async () => {
-        // setCheckAsign(false)
-        // stesArray.push(3)
-        // setSignLoading(true)
-        debugger
+        // debugger
+        setCheckAsign(false)
+        stepsArray.push(1)
+        setSignLoading(true)
         const { contract, accounts, signer } = await getContract(MARKETPLACE_ADDRESS, MARKETPLACE_ARTIFACTS_Abi)
         const ether = ethers.utils.parseEther(Number(state.price).toFixed(18));
         let _end_date = timeStamp
@@ -110,10 +121,9 @@ export default () => {
 
         console.log('voucher', 'signature ', signature, 'salt ', salt, 'tokenContract ', tokenContract, 'endTime ', endTime, 'quantity', quantity, 'owner ', owner, 'auctionType', auctionType);
 
-        // setSignLoading(false)
-        // stesArray.push(4)
-        // setSucess('Message Signed Successsfully');
-        // const values = new URLSearchParams()
+        setSignLoading(false)
+        stepsArray.push(2)
+        setSucess('Message Signed Successsfully');
         uRLSearchParams.set('signature', signature);
         uRLSearchParams.set('salt', salt as any);
         uRLSearchParams.set('tokenContract', tokenContract)
@@ -129,7 +139,6 @@ export default () => {
 
     const putOnSale = async () => {
         // setHandleNftCard(true)
-        // setIpfsLoading(true)
         // debugger
         try {
             await approveMarktplace()
@@ -217,49 +226,16 @@ export default () => {
                         onClick={putOnSale}
                         style={btnStyle}
                     // disabled={!(state.name && state.price && state.royality && state.description)}
-                    >Sell_NFT</button>
+                    >Put_On_Sell</button>
                 </div>
-                <div className={`modal fade modal-dialog modal-dialog-centered`} id="exampleModal1" tabIndex={-1} aria-labelledby="exampleModalLabel1" aria-hidden='true'>
-                    <div className="modal-dialog">
+                <div className={`modal fade`} id="exampleModal1" tabIndex={-1} aria-labelledby="exampleModalLabel1" aria-hidden='true'>
+                    <div className="modal-dialog modal-dialog modal-dialog-centered">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title text-primary" id="exampleModalLabel">Process Details</h5>
                                 <button type="button" id="Close-Modal1" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div className="modal-body">
-                                <div className="text-start d-flex my-2">
-                                    <div className="">
-                                        {!mintLoading ? <img src={stesArray?.includes(2) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
-                                    </div>
-                                    <div className="ms-2">
-                                        <h5 className="fw-bolder">Mint Token</h5>
-                                        <h6>Adding your asset to blockchain</h6>
-                                    </div>
-                                </div>
-                                <div className="text-start d-flex">
-                                    <div className="">
-                                        {!checkAsign ? <img src={stesArray?.includes(3) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
-                                    </div>
-                                    <div className="ms-2">
-                                        <h5 className="fw-bolder">Approve Request</h5>
-                                        <h6>Approve trasaction with your Wallert</h6>
-                                    </div>
-
-                                </div>
-                                <div className="text-start d-flex my-2">
-                                    <div className="">
-                                        {!signLoading ? <img src={stesArray?.includes(4) ? successImg : pendingImg} alt="" width='30px' height='30px' /> : <Spinner />}
-                                    </div>
-                                    <div className="ms-2">
-                                        <h5 className="fw-bolder">Signing & Listing your asset</h5>
-                                    </div>
-                                </div>
-                                <div className="text-start">
-                                    <h3 className="text-primary">
-                                        {sucess}
-                                    </h3>
-                                </div>
-                            </div>
+                            <Modal loading={checkAsign} loading1={signLoading} stepsArray={stepsArray} modalText={modalText} />
                         </div>
                     </div>
                 </div>
