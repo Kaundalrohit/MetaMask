@@ -30,7 +30,6 @@ export const loginWithMetamaskConnect =
                 const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
                 const eth_chainId = await ethereum.request({ method: 'eth_chainId' })
                 const provider = new ethers.providers.Web3Provider(ethereum)
-                // setDefaultAccount(accounts[0])
                 return { accounts, eth_chainId, provider }
             } catch (error) {
                 console.log("loginWithMetamaskConnect error", error);
@@ -52,8 +51,6 @@ export const getMyProvider = async () => {
 
         let balanceInEth = ethers.utils.formatEther(balanceInWei)
         let gasPriceInEth = ethers.utils.formatEther(gasPriceInWei)
-        // setConnButtonText('Wallet connected')
-        // setUserBalance(balanceInEth)
         return { provider, accounts, eth_chainId, balanceInEth, gasPriceInEth, error: null }
     } catch (error) {
         console.log("getMyProvider error", error);
@@ -61,18 +58,18 @@ export const getMyProvider = async () => {
     }
 }
 
+
+export const calculateWrappedAmount = (price: any, quantity: any, tax: number) => {
+    const priceWithQuantity = Number(price) * Number(quantity)
+    const priceFee = (priceWithQuantity * tax) / 100
+    const actualPrice = priceFee + Number(priceWithQuantity)
+    const commission = actualPrice - Number(priceWithQuantity)
+    return { actualPrice, commission }
+}
+
 export const getContract = async (address: string, abi: any) => {
-    // const abi = EhisabERC721.abi;
     const { provider, accounts } = await getMyProvider()
     const signer = provider.getSigner()
     const contract = new ethers.Contract(address, abi, signer);
     return { contract, accounts, signer, provider }
 }
-
-// export const getMarketPlaceContract = async () => {
-//     const abi = MARKETPLACE_ARTIFACTS.abi;
-//     const { provider, accounts } = await getMyProvider()
-//     const signer = provider.getSigner()
-//     const contract = new ethers.Contract(MARKETPLACE_ADDRESS, abi, signer);
-//     return { contract, accounts, provider, signer }
-// }

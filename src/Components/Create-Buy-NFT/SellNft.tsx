@@ -42,7 +42,11 @@ export default () => {
         console.log(date.$d)
         let date_value = (date.$d)
         let date_value1 = Math.round(date_value.getTime() / 1000);
-        setTimeStamp(date_value1)
+
+        // setTimeStamp(date_value1)
+
+        setTimeStamp(1675745674)
+
         console.log('TimeStamp :=>', date_value1)
         setEndDate(moment(date.$d).format('YYYY-MM-DD'))
     };
@@ -134,7 +138,8 @@ export default () => {
         uRLSearchParams.set('auctionType', auctionType);
 
         (window as any).document.getElementById("Close-Modal1").click()
-        navigate({ pathname: `/buy_nft`, search: uRLSearchParams.toString() })
+        // if()
+        navigate({ pathname: `${auctionType === 2 ? '/bid_nft' : '/buy_nft'}`, search: uRLSearchParams.toString() })
     }
 
     const putOnSale = async () => {
